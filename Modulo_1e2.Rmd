@@ -1,0 +1,176 @@
+---
+title: 'Fat Chance: Counting'
+output:
+  html_document:
+    df_print: paged
+---
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+#Load packages
+library(ggplot2)
+library(tidyr)
+library(tibble)
+library(dplyr)
+library(lubridate)
+library(zoo)
+library(forcats)
+library(tidyverse)
+library(ggmap)
+library(sf)
+library(gifski)
+library(osmdata)
+
+```
+
+#Fat Chance: Modulos 1 e 2 - Contagem
+
+Exercícios autopropostos para estudar técnicas de contagem e anaálise combinatória com dados do SGDC. 
+
+##Sequências
+
+Sequencias são grupos de k objetos retirados de um grupo maior ou igual n. Para sequências **a ordem em que são dispostos importa** e podem ou não apresentar repetição. 
+
+###Sequências com repetição. 
+
+Uma notificação é um documento emitido pela Defesa Civil e identificado por um número sequêncial. Por um problema na gráfica que imprime as notificações da o lote de notificações que vão de 130.000 a 130.500 veio com os dois últimos dígitos apagados. Uma destas notificações foi emitida a um cidadão, que compareceu à CODESAL no dia seguinte portando o documento. 
+O atendente identificou que tratava-se de uma notificação defeituosa, pois apresentava a numeração 130.4_ _. 
+Considerando que os dois últimos digitos podem ser preenchidos com números de 0 a 9, com repetição (por exemplo, 130.499), quantas possibilidades temos para a numeração real desta notificação? 
+
+Para o primerio dígito temos as opções 0,1,2,3,4,5,6,7,8 e 9. Logo, n = 10. 
+Para o segundo dígito, como são permitidas repetçãoes, temos as mesmas 10 opções. 
+
+Suponhamos que o primeiro dígito seja 1. Portanto, teremos as possibilidades de numeração:
+
+```{r, warning=FALSE, message=FALSE}
+for (i in seq(0,9,1)){
+  print(paste0(130.41,i))
+}
+```
+Da mesma forma, se tivéssemos certeza de que o segundo dígito faltante é o 2, teriamos as opções: 
+
+```{r,warning=FALSE, message=FALSE}
+for (i in seq(0,9,1)){
+  print(paste0(130.4,i,2))
+}
+```
+
+Fixando o primeiro dígito faltante, teremos 10 possibilidades de numeração para cada uma das 10 opções. Podemos escrever todas as possibilidades 
+
+```{r, warning=FALSE, message=FALSE}
+for (i in seq(0,9,1)){
+  for (j in seq(0,9,1)) {
+      print(paste0(130.4,i,j))
+  }
+}
+```
+
+Totalizando 100 possíveis numerações possíveis para a notificação defeituosa 130.4_ _ que chegou às mãos do atendente. Podemos, então, deduzir que o número de possibilidades, considerando que repetições são permitidas é igual ao número de opções (n) para o primeiro número vezes o número de opções para o segundo. Assim, se o n = 10, Podemos calcular facilmente o número de possibilidades para uma notificação que veio de um lote onde os três últimos dígitos vieram apagados:
+
+130._ _ _ $->(n  . n . n) = n^3 = 10^3 = 1000$ 
+
+Ou seja, teríamos 1000 numerações possíveis. 
+
+**Definição:** O número de opções possíveis para uma sequência de $k$ objetos retirados de $n$ opções **com repetições permitidas** é $n^k$.  
+
+###SequÊncias sem repetição. 
+
+Um enegnheiro recebe um conjunto com 10 ocorrências a serem atendidas ao longo do dia. Elas estão espalhadas pela cidade, então o engenheiro deve elaborar um roteiro que passe por todos os 10 pontos. Quantos roteiros diferentes podem ser montados? 
+
+``` {R, warning=FALSE, message=FALSE}
+pdata<- read.csv("sgdc_anom.csv", sep = ",")
+
+pacote <- pdata %>% filter(year(data_solic) == 2019,ocorr_solic == "DESLIZAMENTO DE TERRA") %>% 
+                    select(cod_proc,nome_bairro,coord_xi_logra, coord_yi_logra) %>% 
+                    sample_n(10)
+pacote  
+```
+
+De forma semelhante ao exemplo anterior, chamaremos de $n$ o número de opções, ou, neste caso, o número de processos dentro do pacote, $n = 10$
+
+Para a primeira parada do roteiro, temos 10 opções. Para segunda parada, teremos os 9 processos restantes, 8 para a terceira parada e assim sucessivamente. Pelo princípio da multiplicação, temos:
+
+$10 \cdot 9 \cdot 8 \cdot 7 \cdot 6 \cdot 5\cdot4 \cdot 3 \cdot 2 \cdot 1 = 10! =3.628.800$
+
+Com apenas 10 processos temos mais de 3 milões e meio de roteiros possíveis! 
+
+```{r,warning=FALSE, message=FALSE}
+mad_map <- get_map(c(-38.55,-13.025,-38.3,-12.85), maptype = "terrain")
+```
+```{r, animation.hook='gifski', warning=FALSE, message=FALSE, fig.align = 'center'}
+for (i in seq(1,10,1)) {
+  pacote <- pacote[sample(nrow(pacote)),]
+  plot1 <- ggmap(mad_map)+
+  geom_point(data = pacote, aes(x=as.numeric(coord_xi_logra), y = as.numeric(coord_yi_logra)),shape=19, size = 3, color ="red")+
+  geom_path(data= pacote, aes(x=as.numeric(coord_xi_logra), y = as.numeric(coord_yi_logra)))
+  print(plot1)
+}
+```
+De forma geral, podemos calcular o número de sequências de $k$ objetos retirados sem repetição de um grupo de $n$ objetos através da formula:
+
+$\frac{n!}{(n-k)!}$
+
+#Coleções
+
+Vimos que sequências são conjuntos de $k$ objetos retirados, com ou sem repetição, de um conjunto maior ou igual de $n$ objetos. Uma coisa importante em sequêcias, como o nome sugere, é a ordem dos $k$ objetos. Por isso, quando contamos os roteiros possíveis, onde existe uma ordem lógica de locais a serem visitados, utilizamos sequências. 
+
+Para estudar conjuntos em que a ordem não é um fator importante, utilizaremos o conceito de **coleção**. 
+
+##Coleções sem repetição. 
+
+Um técnico da engeharia deve preparar o pacote dos engenheiros para o dia seguinte, isto é, selecionar enttre as 300 solicitações em aberto 10 que serão atendidas naquele dia. 
+
+Considerando que o técnico selecione as solicitações sem nenhum critéiro, apenas escolhendo-as ao acaso, quantos pacotes possíveis teriamos? 
+
+
+``` {R, warning=FALSE, message=FALSE}
+
+tela <- pdata %>% filter(year(data_solic) == 2019,ocorr_solic == "DESLIZAMENTO DE TERRA") %>% 
+                    select(cod_proc,nome_bairro,coord_xi_logra, coord_yi_logra) %>% 
+                    sample_n(300)
+
+ggmap(mad_map)+ 
+  geom_point(data = tela, aes(x=as.numeric(coord_xi_logra), y = as.numeric(coord_yi_logra)),shape=19, size = 3, color ="red") +
+  labs(title = "Solicitações em aberto",
+       subtitle = "Total: 300")
+```
+Aprendemos no tópico anterior formas de selecionar objetos de um grupo, sem repetição:
+
+$\frac{n!}{(n-k)!} = \frac{300!}{(300-10)!}=\frac{300!}{290!}=300\cdot299\cdot298\cdot...\cdot291=5,05\cdot10^{24}$
+
+De fato, um número muito grande de possibilidades! Contudo, a ordem em que selecionamos as solicitações para o pacote não importa realmente, pois não é o técnico operacional que faz o roteiro, mas sim o técnico vistoriador. Portanto, podemos selecionar os processos em qualquer ordem, o que pede um outro cálculo: coleções. 
+
+Seja $N$ o número de coleções de $k$ objetos retirados, sem repetição, de $n$ objetos. Uma vez selecionados os processos que vão compor o pacote, temos $10!$ formas de ordená-los, como já calculamos anteriormente no problema dos roteiros. E, pelo principio da multiplicação, $10!\cdot N$ nos dá o número total de sequências possíveis de 10 processos selecionados dentre as 300 solicitações em aberto. 
+Mas nós acabamos de calcular também este número, logo a cima. Portanto, temos que:
+
+$10! \cdot N  = \frac{300!}{290!}$
+
+Portanto.
+
+```{r}
+prod(291:300)/prod(1:10)
+```
+$ N  = \frac{300!}{290!\cdot10!} = \frac{300\cdot299\cdot298\cdot...\cdot291}{10!}=1.4\cdot10^{18}$
+
+O número de pacotes de 10 processos que podemos fazer a partir das 300 solicitações em aberto é da ordem de $10^{18}$, ou seja, 10 com 18 zeros atrás, um número bem grande. 
+
+```{r, animation.hook='gifski', warning=FALSE, message=FALSE, fig.align = 'center'}
+for (i in seq(1,10,1)) {
+pacote <- tela %>% sample_n(10) 
+plot1<- ggmap(mad_map)+ 
+  geom_point(data = tela, aes(x=as.numeric(coord_xi_logra), y = as.numeric(coord_yi_logra)),shape=19, size = 3, color ="red")+
+   geom_point(data = pacote, aes(x=as.numeric(coord_xi_logra), y = as.numeric(coord_yi_logra)),shape=19, size = 3, color ="blue")+
+  labs(title = "Possíveis pacotes",
+       subtitle = paste0("Pacote ", i))
+  print(plot1)
+}
+```
+
+**Ainda assim, o número de coleções tem 6 ordens de grandeza a menos que o número de sequências. Por que?** 
+
+De forma geral, podemos escrever como:
+
+$k! \cdot N = \frac{n!}{(n-k)!} -> N =\frac{n!}{(n-k)!\cdot k!}$
+
+Esta fórmula é tão onipresente na matemática que recebeu um nome especial, sendo chamada de **coeficiente binomial**, e denotada por:
+
+$\binom{n}{k} = \frac{n!}{(n-k)!\cdot k!}$
+
